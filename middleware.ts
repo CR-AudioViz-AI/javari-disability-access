@@ -34,7 +34,12 @@ export function middleware(request: NextRequest, event: NextFetchEvent): NextRes
   } catch {
     // Never let tracking break a request.
   }
+  // Temporary diagnostic: an empty analytics table looks the same whether the
+  // middleware never ran, the env is missing, or the write failed.
   response.headers.set("x-crav-mw", "1")
+  response.headers.set("x-crav-url", process.env.NEXT_PUBLIC_SUPABASE_URL ? "1" : "0")
+  response.headers.set("x-crav-key", process.env.SUPABASE_SERVICE_ROLE_KEY ? "1" : "0")
+  response.headers.set("x-crav-salt", (process.env.ANALYTICS_IP_SALT ?? process.env.NEXTAUTH_SECRET) ? "1" : "0")
   return response
 }
 
