@@ -20,6 +20,27 @@ export function middleware(request: NextRequest, event: NextFetchEvent): NextRes
     // before a detached fetch completes — 44 apps deployed clean and logged
     // nothing. waitUntil keeps the invocation alive for the write WITHOUT
     // delaying the response, which is exactly what it exists for.
+    // Temporary A/B: an inline fetch alongside track(). If the inline write
+    // lands and track() does not, the fault is inside track(); if neither
+    // lands, it is the runtime or the network path.
+    event.waitUntil(
+      fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/analytics_events`, {
+        method: 'POST',
+        headers: {
+          apikey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
+          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=minimal',
+        },
+        body: JSON.stringify({
+          event_type: 'inline-probe',
+          app_id: request.nextUrl.hostname,
+          path: request.nextUrl.pathname,
+          is_bot: true,
+          bot_name: 'inline-probe',
+        }),
+      }).catch(() => {}),
+    )
     event.waitUntil(track({
       path: request.nextUrl.pathname,
       method: request.method,
