@@ -9,13 +9,18 @@
 // silently includes AhrefsBot is a lie told to yourself.
 //
 // CR AudioViz AI, LLC · EIN 39-3646201
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, type NextFetchEvent } from 'next/server'
 import { track } from '@/lib/analytics/track'
 
-export function middleware(request: NextRequest): NextResponse {
+export function middleware(request: NextRequest, event: NextFetchEvent): NextResponse {
   const response = NextResponse.next()
   try {
-    void track({
+    // 2026-08-16: this was `void track(...)`. In Edge middleware the invocation
+    // ends as soon as the response is returned, and Vercel can kill the function
+    // before a detached fetch completes — 44 apps deployed clean and logged
+    // nothing. waitUntil keeps the invocation alive for the write WITHOUT
+    // delaying the response, which is exactly what it exists for.
+    event.waitUntil(track({
       path: request.nextUrl.pathname,
       method: request.method,
       userAgent: request.headers.get('user-agent') ?? '',
@@ -25,7 +30,7 @@ export function middleware(request: NextRequest): NextResponse {
       appId: request.nextUrl.hostname,
       sessionId: request.cookies.get('zsid')?.value ?? null,
       userId: null,
-    })
+    }))
   } catch {
     // Never let tracking break a request.
   }
