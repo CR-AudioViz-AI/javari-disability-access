@@ -34,11 +34,16 @@ export function middleware(request: NextRequest, event: NextFetchEvent): NextRes
   } catch {
     // Never let tracking break a request.
   }
+  response.headers.set("x-crav-mw", "1")
   return response
 }
 
 export const config = {
   // Static assets are excluded: logging a favicon fetch as a visit inflates
   // every number that matters.
-  matcher: ['/((?!_next/static|_next/image|favicon\\.ico|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.webp|.*\\.ico).*)'],
+  // 2026-08-16: this was written with double backslashes — '\\.' in the source,
+  // which is an escaped backslash rather than a literal dot, so the regex never
+  // matched and the middleware never ran. Forty-four apps deployed clean and
+  // logged nothing because of two characters.
+  matcher: ['/((?!_next/static|_next/image|favicon\.ico|.*\.png|.*\.jpg|.*\.svg|.*\.webp|.*\.ico).*)'],
 }
