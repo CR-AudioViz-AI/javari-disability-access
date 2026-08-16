@@ -145,16 +145,7 @@ export async function track(v: Visit): Promise<void> {
     // Short timeout: analytics is never worth holding a request open for.
     signal: AbortSignal.timeout(3000),
     cache: "no-store",
-  })
-    .then(async (r) => {
-      if (!r.ok) {
-        // Temporary: surfaced in the Vercel log so a silent empty table is
-        // diagnosable. track() swallowing failures is right for production and
-        // useless when nothing is arriving.
-        console.error("analytics insert failed", r.status, (await r.text()).slice(0, 200));
-      }
-    })
-    .catch((e) => {
-      console.error("analytics insert threw", String(e).slice(0, 200));
-    });
+  }).catch(() => {
+    // Swallowed on purpose. An analytics outage must not take a page down.
+  });
 }
