@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse, type NextFetchEvent } from 'next/server'
 import { track } from '@/lib/analytics/track'
 
-export async function middleware(request: NextRequest, event: NextFetchEvent): Promise<NextResponse> {
+export function middleware(request: NextRequest, event: NextFetchEvent): NextResponse {
   const response = NextResponse.next()
   try {
     // 2026-08-16: this was `void track(...)`. In Edge middleware the invocation
@@ -20,21 +20,6 @@ export async function middleware(request: NextRequest, event: NextFetchEvent): P
     // before a detached fetch completes — 44 apps deployed clean and logged
     // nothing. waitUntil keeps the invocation alive for the write WITHOUT
     // delaying the response, which is exactly what it exists for.
-    // TEMPORARY: awaited and reported. track() swallows failures by design,
-    // which is correct in production and impossible to diagnose. This runs the
-    // exact same insert inline so the status lands in a header.
-    const dbg = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/analytics_events`, {
-      method: 'POST',
-      headers: {
-        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
-        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''}`,
-        'Content-Type': 'application/json',
-        Prefer: 'return=minimal',
-      },
-      body: JSON.stringify({ event_type: 'pageview', app_id: request.nextUrl.hostname, path: request.nextUrl.pathname, is_bot: false }),
-    }).then(async (r) => `${r.status}:${r.ok ? 'ok' : (await r.text()).slice(0, 90)}`)
-      .catch((e) => `threw:${String(e).slice(0, 90)}`)
-    response.headers.set('x-crav-insert', dbg)
 
     event.waitUntil(track({
       path: request.nextUrl.pathname,
